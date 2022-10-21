@@ -2,29 +2,31 @@ package app
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/spf13/viper"
-	"rest-api/pkg/client/postrgeSQL"
+	"rest-api/internal/controller/http"
+	"rest-api/internal/domain/service"
+	"rest-api/internal/domain/usecase/repo"
+	"rest-api/pkg/client/postgreSQL"
+	"rest-api/pkg/router"
 )
 
-type DsnConfig struct {
-	Name     string
-	Password string
-	Host     string
-	Port     string
-	Database string
+func init() {
+	initConfig()
 }
 
-func App() pgxpool.Pool {
-	initConfig()
+func Run() error {
 
-	//go config.StartKafka()
-	//
-	//fmt.Println("kafka has been started")
+	pool, err := postgreSQL.InitPostgres()
+	if err != nil {
+		return err
+	}
+	bd := repo.NewUserStorage(pool)
+	useCase := service.NewTableService(bd)
+	handler := http.NewFirstHandler(useCase)
+	handler.Register(router.Router())
+	router.NewConnection()
 
-	pool := postrgeSQL.InitPostgres()
-
-	return pool
+	return err
 }
 
 func initConfig() {
@@ -38,5 +40,4 @@ func initConfig() {
 		}
 		panic("can't read config file")
 	}
-
 }

@@ -1,11 +1,10 @@
-package postrgeSQL
+package postgreSQL
 
 import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 	"time"
 )
@@ -18,7 +17,7 @@ type DsnConfig struct {
 	Database string
 }
 
-func InitPostgres() pgxpool.Pool {
+func InitPostgres() (*pgxpool.Pool, error) {
 	pool, err := NewPsqlConnection(context.Background(), DsnConfig{
 		Name:     viper.GetString("Name"),
 		Password: viper.GetString("Password"),
@@ -27,13 +26,13 @@ func InitPostgres() pgxpool.Pool {
 		Database: viper.GetString("Database"),
 	})
 	if err != nil {
-		log.Fatalf("Error conection: %s", err)
+		return nil, fmt.Errorf("error conection: %w", err)
 	}
 
-	return pool
+	return pool, err
 }
 
-func NewPsqlConnection(ctx context.Context, dsnConfig DsnConfig) (pgxpool.Pool, error) {
+func NewPsqlConnection(ctx context.Context, dsnConfig DsnConfig) (*pgxpool.Pool, error) {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
 		dsnConfig.Name,
 		dsnConfig.Password,
@@ -43,10 +42,10 @@ func NewPsqlConnection(ctx context.Context, dsnConfig DsnConfig) (pgxpool.Pool, 
 	)
 	pool, err := doWithTry(ctx, dsn, 5, 5)
 	if err != nil {
-		log.Fatalf("can't connect to DB: %s", err)
+		return nil, fmt.Errorf("can't connect to DB: %w", err)
 	}
 
-	return *pool, nil
+	return pool, nil
 }
 
 func doWithTry(ctx context.Context, dsn string, try int, second time.Duration) (conn *pgxpool.Pool, err error) {
@@ -54,18 +53,12 @@ func doWithTry(ctx context.Context, dsn string, try int, second time.Duration) (
 	defer cancel()
 	for try > 0 {
 		conn, err = pgxpool.Connect(ctx, dsn)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-			time.Sleep(second * time.Second)
-			try--
-
-			continue
-		} else {
-			break
+		if err == nil {
+			return conn, err
 		}
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		time.Sleep(second * time.Second)
+		try--
 	}
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
+	return nil, err
 }

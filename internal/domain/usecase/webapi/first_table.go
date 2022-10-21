@@ -1,4 +1,4 @@
-package usecase
+package webapi
 
 import "rest-api/internal/domain/entity"
 

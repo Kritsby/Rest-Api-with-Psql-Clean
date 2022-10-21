@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	http2 "rest-api/internal/controller/http"
 	"time"
 )
 
@@ -16,7 +15,7 @@ func Router() *httprouter.Router {
 	return router
 }
 
-func NewConnection(handler *http2.FirstHandler) {
+func NewConnection() {
 
 	var wait time.Duration = time.Second * 30
 
@@ -29,8 +28,6 @@ func NewConnection(handler *http2.FirstHandler) {
 		IdleTimeout:  time.Second * 60,
 		Handler:      router,
 	}
-
-	handler.Register(router)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
@@ -46,7 +43,10 @@ func NewConnection(handler *http2.FirstHandler) {
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 
-	srv.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("shutdown server")
 	os.Exit(0)

@@ -1,11 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"rest-api/cmd/app"
-	"rest-api/internal/adapters/db/postgreSQL"
-	"rest-api/internal/controller/http"
-	"rest-api/internal/domain/service"
-	"rest-api/pkg/router"
 )
 
 //@title API
@@ -14,9 +11,7 @@ import (
 
 //@BasePath /
 func main() {
-	pool := app.App()
-	bd := postgreSQL.NewUserStorage(&pool)
-	useCase := service.NewTableService(bd)
-	c := http.NewFirstHandler(useCase)
-	router.NewConnection(c)
+	if err := app.Run(); err != nil {
+		fmt.Println(err)
+	}
 }
